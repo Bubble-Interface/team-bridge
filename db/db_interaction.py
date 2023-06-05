@@ -6,31 +6,29 @@ from sqlalchemy.orm import (
 )
 
 from db import Session
-from db.models import Knowledge
+from db.models import Acronym
 
-# TODO: try except for checking if acronym is present in db
-def get_knowledge(search_text: str) -> str:
-    with Session() as session:
-        stmt = select(
-            Knowledge).where(
-            Knowledge.title.ilike(f'%{search_text}%') | Knowledge.description.ilike(f'%{search_text}%')
-        )
-        result = session.scalars(stmt).all()
-        return result
 
 # TODO: try except for adding the acronym (return True is ok, else False)
-def add_knowledge(title: str, description: str):
+def save_acronym(acronym: str, description: str):
     with Session.begin() as session:
-        new_knowledge = Knowledge(
-            title=title,
+        new_acronym = Acronym(
+            acronym=acronym,
             description=description
         )
-        session.add(new_knowledge)
+        session.add(new_acronym)
         return True
 
+# TODO: try except for checking if acronym is present in db
+def get_acronym_description(acronym: str) -> str:
+    with Session.begin() as session:
+        stmt = select(Acronym.description).where(Acronym.acronym == acronym)
+        acronym_description = session.scalar(stmt)
+        return acronym_description
 
-def list_knowledge():
-    with Session() as session:
-        stmt = select(Knowledge.title)
-        knowledge_list = session.scalars(stmt)
-        return knowledge_list
+def list_acronyms():
+    with Session.begin() as session:
+        stmt = select(Acronym.acronym)
+        acronym_list = session.scalars(stmt)
+        return acronym_list
+    

@@ -1,16 +1,12 @@
 
 from sqlalchemy import (
     String,
-    create_engine,
-    select
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
     mapped_column,
-    Session,
 )
-
 
 
 class Base(DeclarativeBase):

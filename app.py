@@ -7,38 +7,18 @@ import os
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 
-from sqlalchemy import (
-    String,
-    create_engine,
-    select
-)
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-    Session,
-)
-
 from flask import Flask, request
+
+from db.db_interaction import (
+    save_acronym,
+    get_acronym_description,
+    list_acronyms
+)
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app = Flask(__name__)
 flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-engine = create_engine("sqlite:///slackapp.db", echo=True)
-
-class Base(DeclarativeBase):
-    pass
-
-
-class Acronym(Base):
-    __tablename__ = "acronyms"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    acronym: Mapped[str] = mapped_column(String(30), unique=True)
-    description: Mapped[str] = mapped_column(String(120))
-
-    def __repr__(self) -> str:
-        return f"{self.acronym}: {self.description}"
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -47,31 +27,6 @@ logger = logging.getLogger(__name__)
 app = App(logger=logger)
 handler = SlackRequestHandler(app)
 
-# TODO: try except for checking if acronym is present in db
-def get_acronym_description(acronym: str) -> str:
-    with Session(engine) as session:
-        stmt = select(Acronym.description).where(Acronym.acronym == acronym)
-        acronym_description = session.scalar(stmt)
-        return acronym_description
-
-# TODO: try except for adding the acronym (return True is ok, else False)
-def remember_acronym(acronym: str, description: str):
-    with Session(engine) as session:
-        new_acronym = Acronym(
-            acronym=acronym,
-            description=description
-        )
-        session.add(new_acronym)
-        session.commit()
-        return True
-
-
-def list_acronyms():
-    with Session(engine) as session:
-        stmt = select(Acronym.acronym)
-        acronym_list = session.scalars(stmt)
-        return acronym_list
-    
 
 @app.event("app_home_opened")
 def handle_command(say):
@@ -84,7 +39,7 @@ def remember_command(ack, respond, command):
     text = command['text'].split()
     acronym = text[0]
     acronym_description = ' '.join(text[1:])
-    remember_acronym(acronym=acronym, description=acronym_description)
+    save_acronym(acronym=acronym, description=acronym_description)
     respond(f"Acronym: {acronym} is saved")
 
 
@@ -110,7 +65,6 @@ def slack_events():
 
 
 if __name__ == "__main__":
-    Base.metadata.create_all(engine)
     flask_app.run(debug=True, port=3000)
 
 
