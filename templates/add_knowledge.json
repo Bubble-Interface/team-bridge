@@ -1,0 +1,38 @@
+{
+    "type": "modal",
+    "callback_id": "add_acronym_view",
+    "title": {"type": "plain_text", "text": "Add knowledge"},
+    "submit": {"type": "plain_text", "text": "Submit"},
+    "blocks": [
+        {
+			"type": "input",
+            "block_id": "acronym",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "title",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Acronym"
+				}
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Title"
+			}
+		},
+		{
+			"type": "input",
+            "block_id": "description_input",
+			"label": {
+				"type": "plain_text",
+				"text": "What does this acronym mean?",
+				"emoji": true
+			},
+			"element": {
+                "action_id": "description",
+				"type": "plain_text_input",
+				"multiline": true
+			}
+		}
+    ]
+}

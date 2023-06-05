@@ -1,10 +1,12 @@
 import logging
+import os
+import json
 
 from dotenv import load_dotenv
 load_dotenv()
 
-import os
 from slack_bolt import App
+from slack_sdk.errors import SlackApiError
 from slack_bolt.adapter.flask import SlackRequestHandler
 
 from flask import Flask, request
@@ -15,11 +17,14 @@ from db.db_interaction import (
     list_acronyms
 )
 
+# TODO: change from acronyms to terms or smth similar
+# TODO: add missing knowledge actions (submit/request)
+# TODO: add shortcut (create knowledge from the message)
+# TODO: monitor conversations and reply in thread with term explanation
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app = Flask(__name__)
 flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -32,15 +37,61 @@ handler = SlackRequestHandler(app)
 def handle_command(say):
     say("Hey there!")
 
-
-@app.command("/remember")
-def remember_command(ack, respond, command):
+@app.view("add_acronym_view")
+def handle_submission(ack, body, client, view, logger, say):
+    # TODO: send private message to everyone in the chat
+    # about additional info request for that knowledge
+    
+    acronym = view["state"]["values"]["acronym"]["title"]
+    acronym = acronym.get("value")
+    acronym_description = view["state"]["values"]["description_input"]["description"]
+    acronym_description = acronym_description.get("value")
+    user = body["user"]["id"]
+    # Validate the inputs
+    errors = {}
+    if acronym is None:
+        errors["acronym"] = "Please enter an acronym"
+    if acronym_description is None:
+        errors["description_input"] = "Please enter an acronym description"
+    if len(errors) > 0:
+        ack(response_action="errors", errors=errors)
+        return
+    # Acknowledge the view_submission request and close the modal
     ack()
-    text = command['text'].split()
-    acronym = text[0]
-    acronym_description = ' '.join(text[1:])
-    save_acronym(acronym=acronym, description=acronym_description)
-    respond(f"Acronym: {acronym} is saved")
+    # Do whatever you want with the input data - here we're saving it to a DB
+    # then sending the user a verification of their submission
+
+    # Message to send user
+    msg = ""
+    try:
+        # Save to DB
+        save_acronym(acronym=acronym, description=acronym_description)
+        msg = f"Your submission of {acronym} was successful"
+    except Exception as e:
+        # Handle error
+        msg = "There was an error with your submission"
+
+    # Message the user
+    try:
+        say(channel=user, text=msg)
+    except SlackApiError as e:
+        logger.exception(f"Failed to post a message {e}")
+
+
+# TODO: notify in the app members of the channel
+@app.command("/remember")
+def open_modal(ack, body, client):
+    # Acknowledge the command request
+    ack()
+    with open("templates/add_knowledge.json") as add_knowledge_template:
+        add_knowledge_view = json.load(add_knowledge_template)
+    # Call views_open with the built-in client
+    client.views_open(
+        # Pass a valid trigger_id within 3 seconds of receiving it
+        trigger_id=body["trigger_id"],
+        # View payload
+        view=add_knowledge_view
+    )
 
 
 @app.command("/what")
