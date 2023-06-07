@@ -1,0 +1,37 @@
+{
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "We couldnt' find any knowledge"
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Submit"
+					},
+					"style": "primary",
+					"value": "click_me_123",
+					"action_id": "submit_missing_knowledge"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Request"
+					},
+					"value": "click_me_123",
+					"action_id": "request_knowledge"
+				}
+			]
+		}
+	]
+}

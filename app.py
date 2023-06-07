@@ -21,6 +21,7 @@ from db.db_interaction import (
 # TODO: add missing knowledge actions (submit/request)
 # TODO: add shortcut (create knowledge from the message)
 # TODO: monitor conversations and reply in thread with term explanation
+# TODO: "registration" logic when new team joins (add to db)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app = Flask(__name__)
@@ -94,13 +95,73 @@ def open_modal(ack, body, client):
     )
 
 
+# TODO: inhance search functionality:
+# - search inside questions and answers 
+# - search by multiple words
 @app.command("/what")
 def what_command(ack, respond, command):
     ack()
-    text = command['text'].split()
-    acronym = text[0]
-    acronym_description = get_acronym_description(acronym=acronym)
-    respond(acronym_description)
+    # TODO: testcase => user invokes command without providing text
+    text = command['text']
+    results = get_acronym_description(acronym=text)
+    if results:
+        respond(results)
+    else:
+        with open("templates/missing_knowledge.json") as missing_knowledge:
+            missing_knowledge_response = json.load(missing_knowledge)
+            missing_knowledge_response["blocks"][1]["elements"][0]["value"] = text
+        respond(
+            blocks=missing_knowledge_response["blocks"]
+        )
+
+@app.block_action('request_knowledge')
+def request_knowledge(ack, client, body, respond):
+    ack()
+    try:
+        respond(delete_original=True)
+    except SlackApiError as e:
+        logger.exception(f"Error deleting original ephemeral message: {e}")
+
+    with open('templates/request_knowledge.json') as request_knowledge:
+        request_knowledge_template = json.load(request_knowledge)
+    
+    client.views_open(
+        # Pass a valid trigger_id within 3 seconds of receiving it
+        trigger_id=body["trigger_id"],
+        # View payload
+        view=request_knowledge_template
+    )
+
+@app.view("request_knowledge")
+def handle_view_submission_events(ack, body, logger):
+    # TODO: handle knowledge request with broadcasted messaging to every user in the chat
+    # in those messages there will be a button suggesting to add requested knowledge
+    # If someone submitted requested knowledge all those messages will disappear for all broadcasted users  
+    # TODO: don't forget to mention who requested the knowledge
+    ack()
+    logger.info(body)
+
+
+@app.block_action('submit_missing_knowledge')
+def submit_missing_knowledge(ack, client, body, action, respond):
+    ack()
+    with open("templates/add_knowledge.json") as add_knowledge_template:
+        add_knowledge_view = json.load(add_knowledge_template)
+    add_knowledge_view["blocks"][0]["element"]["initial_value"] = action["value"]
+    
+    try:
+        respond(delete_original=True)
+    except SlackApiError as e:
+        logger.exception(f"Error deleting original ephemeral message: {e}")
+
+    # Call views_open with the built-in client
+    client.views_open(
+        # Pass a valid trigger_id within 3 seconds of receiving it
+        trigger_id=body["trigger_id"],
+        # View payload
+        view=add_knowledge_view
+    )
+
 
 # TODO: list as bullet points: acronym: description
 @app.command("/list")
