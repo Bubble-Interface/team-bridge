@@ -175,9 +175,9 @@ def list_command(ack, respond, command):
 def slack_events():
     return handler.handle(request)
 
-
+# TODO: port as env var
 if __name__ == "__main__":
-    flask_app.run(debug=True, port=3000)
+    flask_app.run(host="0.0.0.0", debug=True, port=3000)
 
 
 # pip install -r requirements.txt

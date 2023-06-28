@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED 1
 COPY templates/ templates/
 COPY db/ db/
 COPY app.py .
+COPY wsgi.py .
 COPY pyproject.toml .
 COPY poetry.lock .
 COPY .env .
@@ -19,4 +20,4 @@ RUN pip3 install poetry
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
 
-CMD [ "python", "./app.py" ]
+CMD [ "gunicorn", "--bind", "0.0.0.0:3000", "wsgi:flask_app" ]
